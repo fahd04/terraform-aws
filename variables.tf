@@ -62,12 +62,6 @@ variable "private_subnet_cidr_blocks" {
     ]
 }
 
-variable "my_ip" {
-    description = "Your IP adress"
-    type        = string
-    sensitive   = true
-}
-
 variable "db_username" {
     description = "Database username"
     type        =  string
