@@ -5,3 +5,4 @@ terraform_kp.pub
 terraform.tfstate
 terraform.tfstate.backup
 .DS*
+.terraform.tfstate.lock.info
