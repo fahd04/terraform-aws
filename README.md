@@ -107,7 +107,6 @@ This section highlights the key frameworks and libraries used to build your proj
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
-
 <!-- GETTING STARTED -->
 ## Getting Started
 
@@ -151,21 +150,13 @@ Follow the steps below to run the Terraform script and automate AWS infrastructu
    ```
 
 Once the script is executed, the AWS infrastructure will be provisioned as defined in the Terraform configuration.
-   ```
-```
+
+
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
 
 <!-- USAGE EXAMPLES -->
-## Usage
-
-
-
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
 
 
 
