@@ -110,6 +110,16 @@ This section highlights the key frameworks and libraries used to build your proj
 
 Follow the steps below to run the Terraform script and automate AWS infrastructure provisioning.
 
+### Prerequisite
+
+Before you begin, ensure you have the following installed:
+
+- **AWS CLI**: Install the AWS Command Line Interface to manage your AWS services. Follow the installation guide here: [AWS CLI Installation Guide](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html).
+
+- **Terraform CLI**: Install Terraform to manage your infrastructure as code. You can find the installation instructions here: [Terraform Installation Guide](https://developer.hashicorp.com/terraform/docs/install).
+
+### Installation
+
 1. **Clone the repository**:
    ```sh
    git clone https://github.com/fahd04/terraform-aws-setup.git
