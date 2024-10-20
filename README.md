@@ -23,7 +23,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/fahd04/terraform-aws">
-    <img src="images/logo.png" alt="Logo" width="80" height="80">
+    <img src="aws-terraform.jpg" alt="Logo" width="80" height="80">
   </a>
   <h3 align="center">Provisioning AWS Infrastructure with Terraform</h3>
   <p align="center">
@@ -194,7 +194,7 @@ Project Link: [https://github.com/fahd04/terraform-aws](https://github.com/fahd0
 [license-url]: https://github.com/fahd04/terraform-aws/blob/main/LICENSE.txt
 [linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
 [linkedin-url]: https://www.linkedin.com/in/fahd-rahali-77b02526a/
-[product-screenshot]: images/dashboard.png
+[product-screenshot]: /infra-graph.jpeg
 [Terraform]: https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white
 [Terraform-url]: https://developer.hashicorp.com/terraform/docs
 [AWS]: https://img.shields.io/badge/AWS-%23232f3e?logo=amazon
