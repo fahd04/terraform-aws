@@ -111,19 +111,6 @@ This section highlights the key frameworks and libraries used to build your proj
 <!-- GETTING STARTED -->
 ## Getting Started
 
-This is an example of how you may give instructions on setting up your project locally.
-To get a local copy up and running follow these simple example steps.
-
-### Prerequisites
-
-This is an example of how to list things you need to use the software and how to install them.
-* npm
-  ```sh
-  npm install npm@latest -g
-  ```
-
-## Steps to Run the Terraform Script
-
 Follow the steps below to run the Terraform script and automate AWS infrastructure provisioning.
 
 1. **Clone the repository**:
@@ -165,7 +152,7 @@ Follow the steps below to run the Terraform script and automate AWS infrastructu
 
 Once the script is executed, the AWS infrastructure will be provisioned as defined in the Terraform configuration.
    ```
-
+```
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 
