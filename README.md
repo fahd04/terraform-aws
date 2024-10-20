@@ -110,7 +110,7 @@ This section highlights the key frameworks and libraries used to build your proj
 
 Follow the steps below to run the Terraform script and automate AWS infrastructure provisioning.
 
-### Prerequisite
+### Prerequisites
 
 Before you begin, ensure you have the following installed:
 
