@@ -23,7 +23,7 @@
 <br />
 <div align="center">
   <a href="https://github.com/fahd04/terraform-aws">
-    <img src="aws-terraform.jpg" alt="Logo" width="80" height="80">
+    <img src="/aws-terraform.jpg" alt="Logo" width="80" height="80">
   </a>
   <h3 align="center">Provisioning AWS Infrastructure with Terraform</h3>
   <p align="center">
