@@ -1,8 +1,21 @@
-.terraform.lock.hcl
-.terraform
-terraform_kp.pem
-terraform_kp.pub
-terraform.tfstate
-terraform.tfstate.backup
-.DS*
+# Terraform working dirs and state
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
 .terraform.tfstate.lock.info
+*.tfplan
+
+# Never commit secrets
+*.pem
+*.key
+secrets.tfvars
+*.secret.tfvars
+
+# OS
+.DS_Store

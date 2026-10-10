@@ -1,209 +1,125 @@
-<a id="readme-top"></a>
+# terraform-aws
 
+![terraform](https://github.com/fahd04/terraform-aws/actions/workflows/terraform.yml/badge.svg)
 
+Terraform for a three-tier web app on AWS (frontend EC2, backend EC2, MySQL RDS), deployed as three isolated environments: **dev**, **staging** and **prod**.
 
-<!-- PROJECT SHIELDS -->
-<!--
-*** I'm using markdown "reference style" links for readability.
-*** Reference links are enclosed in brackets [ ] instead of parentheses ( ).
-*** See the bottom of this document for the declaration of the reference variables
-*** for contributors-url, forks-url, etc. This is an optional, concise syntax you may use.
-*** https://www.markdownguide.org/basic-syntax/#reference-style-links
--->
-[![Contributors][contributors-shield]][contributors-url]
-[![Forks][forks-shield]][forks-url]
-[![Stargazers][stars-shield]][stars-url]
-[![Issues][issues-shield]][issues-url]
-[![MIT License][license-shield]][license-url]
-[![LinkedIn][linkedin-shield]][linkedin-url]
+## Architecture
 
+```mermaid
+flowchart LR
+  user((Internet)) -->|HTTP :80| fe
 
+  subgraph VPC["VPC (one per environment)"]
+    subgraph pub["Public subnets (multi-AZ)"]
+      fe["Frontend EC2<br/>Elastic IP"]
+      be["Backend EC2"]
+    end
+    subgraph priv["Private subnets (no internet route)"]
+      db[("RDS MySQL")]
+    end
+  end
 
-<!-- PROJECT LOGO -->
-<br />
-<div align="center">
-  <a href="https://github.com/fahd04/terraform-aws">
-    <img src="/terraform-aws.jpg" alt="Logo" >
-  </a>
-  <h3 align="center">Provisioning AWS Infrastructure with Terraform</h3>
-  <p align="center">
-    <br />
-    <a href="https://github.com/fahd04/terraform-aws"><strong>Explore the docs »</strong></a>
-    <br />
-    <br />
-    <a href="https://github.com/fahd04/terraform-aws">View Demo</a>
-    ·
-    <a href="https://github.com/fahd04/terraform-aws/issues/new?labels=bug&template=bug-report---.md">Report Bug</a>
-    ·
-    <a href="https://github.com/fahd04/terraform-aws/issues/new?labels=enhancement&template=feature-request---.md">Request Feature</a>
-  </p>
-</div>
+  fe -->|:8080, SG to SG| be
+  be -->|:3306, SG to SG| db
+  be -.->|reads credentials| sm["Secrets Manager"]
+  ops((Operator)) -.->|SSM Session Manager| fe & be
+```
 
+- Only the frontend accepts traffic from the internet. The backend accepts traffic only from the frontend security group, and the database only from the backend security group.
+- No SSH and no key pairs. Shell access goes through **SSM Session Manager**, so port 22 is closed everywhere.
+- The database password is generated and stored by RDS in **Secrets Manager** (`manage_master_user_password`). It is never in a tfvars file or in Terraform state. The backend instance role can read that one secret.
+- EBS and RDS storage are encrypted, and instances require IMDSv2.
 
+## Repository layout
 
-<!-- TABLE OF CONTENTS -->
-<details>
-  <summary>Table of Contents</summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#built-with">Built With</a></li>
-      </ul>
-    </li>
-    <li>
-      <a href="#getting-started">Getting Started</a>
-      <ul>
-        <li><a href="#prerequisites">Prerequisites</a></li>
-        <li><a href="#installation">Installation</a></li>
-      </ul>
-    </li>
-    <li><a href="#license">License</a></li>
-    <li><a href="#contact">Contact</a></li>
-  </ol>
-</details>
+```
+.
+├── bootstrap/            # one-time: S3 bucket for remote state
+├── modules/
+│   ├── network/          # VPC, public/private subnets across AZs, routing
+│   ├── compute/          # EC2 + security group + IAM role (reused for frontend and backend)
+│   └── database/         # RDS MySQL + subnet group + security group
+└── envs/
+    ├── dev/              # each env: own root module, own state file, own tfvars
+    ├── staging/
+    └── prod/
+```
 
+Each environment is a separate root module with its own state (`<env>/terraform.tfstate` in S3, locked with S3 native locking). A `terraform apply` in dev cannot touch prod. The `.tf` files are the same in every env; **only `terraform.tfvars` differs**:
 
+| | dev | staging | prod |
+|---|---|---|---|
+| VPC CIDR | 10.10.0.0/16 | 10.20.0.0/16 | 10.30.0.0/16 |
+| Availability zones | 2 | 2 | 3 |
+| Frontend / backend | 1 × t3.micro | 1 × t3.small | 2 × t3.medium |
+| RDS class | db.t3.micro | db.t3.small | db.t3.medium |
+| Multi-AZ RDS | no | no | yes |
+| Backup retention | 0 days | 3 days | 14 days |
+| Deletion protection | no | no | yes |
+| Final snapshot | skipped | skipped | kept |
 
-<!-- ABOUT THE PROJECT -->
-## About The Project
+The VPC CIDRs don't overlap, so the environments can be peered later if needed.
 
-[![Product Name Screen Shot][product-screenshot]](https://example.com)
+## Usage
 
-# 🌍 Infrastructure as Code with AWS & Terraform
+Requirements: Terraform >= 1.10, AWS credentials for the target account.
 
-As part of a larger full-stack application, I recently delved into **Infrastructure as Code (IaC)**, leveraging **AWS** and **Terraform** to streamline infrastructure provisioning.
+**1. Create the state bucket (once)**
 
-## 🛠️✨ Automated Infrastructure Provisioning
-Instead of manually configuring AWS infrastructure for testing, I utilized Terraform's powerful capabilities to automate the process.
+```sh
+cd bootstrap
+terraform init
+terraform apply -var="bucket_name=<globally-unique-bucket-name>"
+```
 
-### 📖 What is Terraform?
-**Terraform** is an open-source IaC tool developed by **HashiCorp**. It allows you to define and provision cloud infrastructure using a declarative configuration language.
+**2. Deploy an environment**
 
-## 🌍 Project Highlights
-- 🚀 **Deployed two EC2 instances**: One for the backend and another for the frontend, each residing in separate public subnets.
-- 💾 **MySQL RDS Database**: Orchestrated the deployment of a database spread across two subnets for enhanced performance.
-- 🔒 **Security Groups**: Implemented security rules to control traffic between backend, frontend, and database for secure communication.
-- 🌐 **Custom VPC with Internet Gateway**: Enabled HTTP & SSH access for backend and frontend developers via a Terraform-managed VPC.
+```sh
+export TF_STATE_BUCKET=<bucket-name-from-step-1>
+make plan ENV=dev
+make apply ENV=dev
+```
 
-## 🧩 Why I Chose IaC:
-- **Efficiency Boost**: Quickly set up and tear down AWS resources for testing, eliminating manual configuration.
-- **Scalability in Focus**: Designed a modular, scalable infrastructure that adapts to the evolving needs of the project.
+Or without make:
 
+```sh
+terraform -chdir=envs/dev init -backend-config="bucket=$TF_STATE_BUCKET"
+terraform -chdir=envs/dev plan -out=dev.tfplan
+terraform -chdir=envs/dev apply dev.tfplan
+```
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+**3. Connect to an instance**
 
+```sh
+aws ssm start-session --target $(terraform -chdir=envs/dev output -json backend_instance_ids | jq -r '.[0]')
+```
 
+**4. Read the database credentials**
 
-### Built With
+```sh
+aws secretsmanager get-secret-value \
+  --secret-id $(terraform -chdir=envs/dev output -raw database_secret_arn) \
+  --query SecretString --output text
+```
 
-This section highlights the key frameworks and libraries used to build your project.
+## CI
 
-* [![Terraform][Terraform]][Terraform-url]
-* [![AWS][AWS]][AWS-url]
+GitHub Actions runs on every pull request:
 
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
+- `terraform fmt -check`
+- `terraform validate` for each environment
+- `tflint` with the AWS ruleset
 
+## Trade-offs and next steps
 
-<!-- GETTING STARTED -->
-## Getting Started
+These were left out on purpose to keep cost low for a side project. In a real production setup I would add:
 
-Follow the steps below to run the Terraform script and automate AWS infrastructure provisioning.
+- An **Application Load Balancer** with HTTPS (ACM) in front of an Auto Scaling Group, instead of fixed instances with Elastic IPs.
+- Backend instances in **private subnets** behind a NAT gateway or VPC endpoints. They are in public subnets here to avoid NAT gateway cost, but their security group only allows traffic from the frontend.
+- A plan/apply pipeline using GitHub OIDC to assume an AWS role, with a manual approval step for prod.
+- Separate AWS accounts per environment (AWS Organizations).
 
-### Prerequisites
-
-Before you begin, ensure you have the following installed:
-
-- **AWS CLI**: Install the AWS Command Line Interface to manage your AWS services. Follow the installation guide here: [AWS CLI Installation Guide](https://docs.aws.amazon.com/cli/latest/userguide/cli-configure-quickstart.html).
-
-- **Terraform CLI**: Install Terraform to manage your infrastructure as code. You can find the installation instructions here: [Terraform Installation Guide](https://developer.hashicorp.com/terraform/docs/install).
-
-### Installation
-
-1. **Clone the repository**:
-   ```sh
-   git clone https://github.com/fahd04/terraform-aws-setup.git
-   ```
-
-2. **Navigate to the Terraform project directory**:
-   ```sh
-   cd terraform-aws-setup
-   ```
-
-3. **Initialize Terraform** (this downloads the required providers and modules):
-   ```sh
-   terraform init
-   ```
-
-4. **Validate the Terraform configuration** to ensure it's correct:
-   ```sh
-   terraform validate
-   ```
-
-5. **Preview the infrastructure changes** (optional but recommended):
-   ```sh
-   terraform plan
-   ```
-
-6. **Apply the Terraform configuration** to provision the infrastructure:
-   ```sh
-   terraform apply
-   ```
-   _You will be prompted to confirm. Type `yes` to proceed._
-
-7. **Change the git remote URL** to avoid accidental pushes to the original project:
-   ```sh
-   git remote set-url origin github_username/repo_name
-   git remote -v # confirm the changes
-   ```
-
-Once the script is executed, the AWS infrastructure will be provisioned as defined in the Terraform configuration.
-
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- USAGE EXAMPLES -->
-
-
-
-<!-- LICENSE -->
 ## License
 
-Distributed under the MIT License. See `LICENSE.txt` for more information.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- CONTACT -->
-## Contact
-
-Fahd Rahali - [LinkedIn](https://www.linkedin.com/in/fahd-rahali-77b02526a/) - fahdrahali43@gmail.com
-
-Project Link: [https://github.com/fahd04/terraform-aws](https://github.com/fahd04/terraform-aws)
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-
-
-<!-- MARKDOWN LINKS & IMAGES -->
-<!-- https://www.markdownguide.org/basic-syntax/#reference-style-links -->
-[contributors-shield]: https://img.shields.io/github/contributors/fahd04/terraform-aws.svg?style=for-the-badge
-[contributors-url]: https://github.com/fahd04/terraform-aws/graphs/contributors
-[forks-shield]: https://img.shields.io/github/forks/fahd04/terraform-aws.svg?style=for-the-badge
-[forks-url]: https://github.com/fahd04/terraform-aws/network/members
-[stars-shield]: https://img.shields.io/github/stars/fahd04/terraform-aws.svg?style=for-the-badge
-[stars-url]: https://github.com/fahd04/gest-app/stargazers
-[issues-shield]: https://img.shields.io/github/issues/fahd04/terraform-aws.svg?style=for-the-badge
-[issues-url]: https://github.com/fahd04/terraform-aws/issues
-[license-shield]: https://img.shields.io/github/license/fahd04/terraform-aws.svg?style=for-the-badge
-[license-url]: https://github.com/fahd04/terraform-aws/blob/main/LICENSE.txt
-[linkedin-shield]: https://img.shields.io/badge/-LinkedIn-black.svg?style=for-the-badge&logo=linkedin&colorB=555
-[linkedin-url]: https://www.linkedin.com/in/fahd-rahali-77b02526a/
-[product-screenshot]: /infra-graph.jpeg
-[Terraform]: https://img.shields.io/badge/Terraform-7B42BC?style=for-the-badge&logo=terraform&logoColor=white
-[Terraform-url]: https://developer.hashicorp.com/terraform/docs
-[AWS]: https://img.shields.io/badge/AWS-%23232f3e?logo=amazon
-[AWS-url]: https://docs.aws.amazon.com/
+MIT. See [LICENSE.txt](LICENSE.txt).
